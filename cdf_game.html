@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لعبة CDF التفاعلية</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&family=Cairo:wght@400;600;800&display=swap');
+
+  :root {
+    --pink: #FF6B9D;
+    --blue: #5BC4F5;
+    --yellow: #FFD93D;
+    --dark: #1a1a2e;
+    --green: #6BCB77;
+    --red: #FF4D6D;
+    --white: #FFFDF7;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--dark);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255,107,157,0.15) 0%, transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(91,196,245,0.15) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(255,217,61,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .header {
+    text-align: center;
+    padding: 30px 20px 20px;
+  }
+
+  .header h1 {
+    font-family: 'Tajawal', sans-serif;
+    font-size: clamp(1.6rem, 5vw, 2.8rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--pink), var(--yellow), var(--blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  .header p {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.95rem;
+  }
+
+  .score-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 12px 20px;
+    margin: 16px 0;
+    backdrop-filter: blur(10px);
+  }
+
+  .score-item { text-align: center; }
+
+  .score-item .label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .score-item .value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--yellow);
+  }
+
+  .chapters {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+    scrollbar-width: none;
+  }
+
+  .chapters::-webkit-scrollbar { display: none; }
+
+  .chapter-btn {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 2px solid transparent;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.6);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+
+  .chapter-btn.active {
+    background: var(--pink);
+    color: white;
+    border-color: var(--pink);
+    font-weight: 700;
+  }
+
+  .chapter-btn.done {
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .chapter-btn:hover:not(.active) {
+    background: rgba(255,255,255,0.15);
+    color: white;
+  }
+
+  .game-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 24px;
+    padding: 28px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .topic-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-cdf { background: rgba(255,107,157,0.2); color: var(--pink); border: 1px solid var(--pink); }
+  .badge-ev { background: rgba(255,217,61,0.2); color: var(--yellow); border: 1px solid var(--yellow); }
+  .badge-var { background: rgba(91,196,245,0.2); color: var(--blue); border: 1px solid var(--blue); }
+  .badge-mgf { background: rgba(107,203,119,0.2); color: var(--green); border: 1px solid var(--green); }
+  .badge-moment { background: rgba(255,77,109,0.2); color: #ff9eb5; border: 1px solid #ff9eb5; }
+
+  .question-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.7;
+    margin-bottom: 8px;
+    color: var(--white);
+  }
+
+  .prob-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    font-size: 0.9rem;
+  }
+
+  .prob-table th {
+    background: rgba(255,107,157,0.3);
+    color: var(--pink);
+    padding: 8px 12px;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .prob-table td {
+    background: rgba(255,255,255,0.05);
+    padding: 8px 12px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 500px) {
+    .options-grid { grid-template-columns: 1fr; }
+    .input-row { flex-direction: column; }
+    .submit-btn { width: 100%; }
+  }
+
+  .option-btn {
+    padding: 14px 18px;
+    border-radius: 14px;
+    border: 2px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    color: var(--white);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: right;
+    direction: rtl;
+  }
+
+  .option-btn:hover:not(:disabled) {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.35);
+    transform: translateY(-2px);
+  }
+
+  .option-btn.correct {
+    background: rgba(107,203,119,0.25);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .option-btn.wrong {
+    background: rgba(255,77,109,0.2);
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .option-btn:disabled { cursor: default; }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .answer-input {
+    flex: 1;
+    padding: 14px 18px;
+    border-radius: 14px;
+    border: 2px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.08);
+    color: var(--white);
+    font-family: 'Cairo', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border 0.2s;
+    direction: ltr;
+    text-align: center;
+  }
+
+  .answer-input:focus { border-color: var(--blue); }
+  .answer-input.correct-input { border-color: var(--green); background: rgba(107,203,119,0.1); }
+  .answer-input.wrong-input { border-color: var(--red); background: rgba(255,77,109,0.1); }
+
+  .submit-btn {
+    padding: 14px 24px;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, var(--pink), #c94b7b);
+    color: white;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .submit-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+
+  .feedback {
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.6;
+    display: none;
+    margin-bottom: 16px;
+  }
+
+  .feedback.show { display: block; animation: fadeIn 0.3s ease; }
+  .feedback.correct { background: rgba(107,203,119,0.15); border: 1px solid var(--green); color: var(--green); }
+  .feedback.wrong { background: rgba(255,77,109,0.15); border: 1px solid var(--red); color: #ff9eb5; }
+
+  .next-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, var(--blue), #2980b9);
+    color: white;
+    font-family: 'Cairo', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: none;
+  }
+
+  .next-btn.show { display: block; animation: fadeIn 0.3s; }
+  .next-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+
+  .progress-wrap {
+    background: rgba(255,255,255,0.1);
+    border-radius: 50px;
+    height: 6px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 50px;
+    background: linear-gradient(90deg, var(--pink), var(--yellow));
+    transition: width 0.5s ease;
+  }
+
+  .completion-screen {
+    text-align: center;
+    padding: 40px 20px;
+    display: none;
+  }
+
+  .completion-screen.show { display: block; animation: fadeIn 0.5s; }
+
+  .trophy { font-size: 4rem; margin-bottom: 16px; }
+
+  .completion-screen h2 {
+    font-family: 'Tajawal', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--yellow), var(--pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+  }
+
+  .final-score {
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--yellow);
+    margin: 20px 0;
+  }
+
+  .restart-btn {
+    padding: 16px 40px;
+    border-radius: 50px;
+    border: none;
+    background: linear-gradient(135deg, var(--pink), var(--yellow));
+    color: var(--dark);
+    font-family: 'Cairo', sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.2s;
+    margin-top: 20px;
+  }
+
+  .restart-btn:hover { transform: scale(1.05); }
+
+  .concept-card {
+    background: rgba(255,217,61,0.08);
+    border: 1px solid rgba(255,217,61,0.25);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.8);
+  }
+
+  .concept-card strong {
+    color: var(--yellow);
+    font-size: 0.95rem;
+  }
+
+  .formula {
+    font-family: 'Courier New', monospace;
+    background: rgba(0,0,0,0.3);
+    padding: 2px 8px;
+    border-radius: 6px;
+    color: var(--blue);
+    font-size: 0.9rem;
+  }
+
+  .suits {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+    opacity: 0.4;
+  }
+
+  .q-number {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="suits">♣ ♠ ♦ ♥</div>
+    <h1>🎲 لعبة CDF التفاعلية</h1>
+    <p>اختبر فهمك لدالة التوزيع التراكمي والقيمة المتوقعة</p>
+  </div>
+
+  <div class="score-bar">
+    <div class="score-item">
+      <div class="label">النقاط</div>
+      <div class="value" id="scoreVal">0</div>
+    </div>
+    <div class="score-item">
+      <div class="label">السؤال</div>
+      <div class="value" id="qNum">1 / 10</div>
+    </div>
+    <div class="score-item">
+      <div class="label">الصحيح</div>
+      <div class="value" id="correctVal">0</div>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-fill" id="progressBar" style="width:0%"></div>
+  </div>
+
+  <div class="chapters" id="chapterNav"></div>
+
+  <div id="gameArea"></div>
+
+  <div class="completion-screen" id="completionScreen">
+    <div class="trophy">🏆</div>
+    <h2>أحسنت! أنهيت اللعبة</h2>
+    <div class="final-score" id="finalScore"></div>
+    <p style="color:rgba(255,255,255,0.6); font-size:0.95rem;">لقد أجبت على جميع الأسئلة!</p>
+    <button class="restart-btn" onclick="restartGame()">🔄 إعادة اللعب</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+  {
+    id: 1,
+    topic: "تعريف CDF",
+    badge: "badge-cdf",
+    type: "mcq",
+    concept: "<strong>دالة التوزيع التراكمي (CDF)</strong> تعطينا: <span class='formula'>F(x) = P(X ≤ x) = Σ f(a)</span> — وهي دائماً غير تناقصية وتتراوح بين 0 و 1.",
+    question: "ماذا تمثل دالة التوزيع التراكمي F(x)؟",
+    options: ["احتمال أن X = x بالضبط", "احتمال أن X ≤ x", "احتمال أن X > x", "متوسط قيم X"],
+    answer: 1,
+    explanation: "✅ صح! F(x) = P(X ≤ x) — وهي مجموع احتمالات جميع القيم الأصغر من أو تساوي x."
+  },
+  {
+    id: 2,
+    topic: "خصائص CDF",
+    badge: "badge-cdf",
+    type: "mcq",
+    concept: "<strong>خصائص CDF:</strong> F(-∞) = 0 و F(∞) = 1، وهي دائماً <em>غير تناقصية</em> — إذا كان x < y فإن F(x) ≤ F(y).",
+    question: "ما هي قيمة F(∞)؟",
+    options: ["0", "0.5", "1", "∞"],
+    answer: 2,
+    explanation: "✅ صح! F(∞) = 1 لأن مجموع جميع الاحتمالات يساوي 1 دائماً."
+  },
+  {
+    id: 3,
+    topic: "حساب CDF",
+    badge: "badge-cdf",
+    type: "mcq",
+    table: { x: [1,2,3,4,5], px: [0.05,0.15,0.25,0.30,0.25] },
+    concept: "بناءً على الجدول أدناه — لحساب F(x) نجمع الاحتمالات من الأصغر حتى x.",
+    question: "ما قيمة F(3) = P(X ≤ 3)؟",
+    options: ["0.25", "0.40", "0.45", "0.70"],
+    answer: 2,
+    explanation: "✅ صح! F(3) = P(X=1)+P(X=2)+P(X=3) = 0.05+0.15+0.25 = 0.45"
+  },
+  {
+    id: 4,
+    topic: "احتمال المدى",
+    badge: "badge-cdf",
+    type: "input",
+    table: { x: [1,2,3,4,5], px: [0.05,0.15,0.25,0.30,0.25] },
+    concept: "لإيجاد P(a < X ≤ b) نستخدم: <span class='formula'>P(a < X ≤ b) = F(b) - F(a)</span> أو نجمع الاحتمالات مباشرة.",
+    question: "ما قيمة P(2 < X ≤ 4) ؟",
+    answer: "0.55",
+    placeholder: "أدخل الإجابة (مثال: 0.55)",
+    explanation: "✅ صح! P(2<X≤4) = P(X=3)+P(X=4) = 0.25+0.30 = 0.55"
+  },
+  {
+    id: 5,
+    topic: "PMF من CDF",
+    badge: "badge-cdf",
+    type: "mcq",
+    concept: "لإيجاد PMF من CDF: <span class='formula'>f(x) = F(x) - F(x-1)</span> — أي نطرح القيمة السابقة من الحالية.",
+    question: "إذا كان F(1)=0.35 و F(0)=0.10، ما قيمة f(1)؟",
+    options: ["0.10", "0.25", "0.35", "0.45"],
+    answer: 1,
+    explanation: "✅ صح! f(1) = F(1) - F(0) = 0.35 - 0.10 = 0.25"
+  },
+  {
+    id: 6,
+    topic: "القيمة المتوقعة",
+    badge: "badge-ev",
+    type: "mcq",
+    concept: "<strong>القيمة المتوقعة (المتوسط):</strong> <span class='formula'>E(X) = Σ x·f(x)</span> — تعطينا القيمة التي نتوقعها في المتوسط لو كررنا التجربة كثيراً.",
+    question: "لعبة لها نقاط: 2 باحتمال 0.2، و5 باحتمال 0.5، و8 باحتمال 0.3. ما E(X)؟",
+    options: ["4.5", "5.0", "5.3", "5.8"],
+    answer: 2,
+    explanation: "✅ صح! E(X) = 2(0.2)+5(0.5)+8(0.3) = 0.4+2.5+2.4 = 5.3"
+  },
+  {
+    id: 7,
+    topic: "قاعدة الثابت",
+    badge: "badge-ev",
+    type: "mcq",
+    concept: "<strong>قواعد مهمة:</strong><br>• E(C) = C (القيمة المتوقعة للثابت هي هو نفسه)<br>• E(C·g(X)) = C·E(g(X)) (الثابت يُخرج خارج التوقع)<br>• E(aX+b) = a·E(X) + b",
+    question: "إذا كان E(X) = 4، ما قيمة E(3X)؟",
+    options: ["4", "7", "12", "16"],
+    answer: 2,
+    explanation: "✅ صح! E(3X) = 3·E(X) = 3×4 = 12"
+  },
+  {
+    id: 8,
+    topic: "دالة X²",
+    badge: "badge-ev",
+    type: "input",
+    concept: "لإيجاد E(X²): <span class='formula'>E(X²) = Σ x²·f(x)</span> — نربع كل قيمة ثم نضرب في احتمالها ونجمع.",
+    question: "إذا كان P(0)=0.2، P(1)=0.5، P(2)=0.3، ما قيمة E(X²)؟",
+    answer: "1.7",
+    placeholder: "أدخل الإجابة",
+    explanation: "✅ صح! E(X²) = 0²(0.2)+1²(0.5)+2²(0.3) = 0+0.5+1.2 = 1.7"
+  },
+  {
+    id: 9,
+    topic: "التباين",
+    badge: "badge-var",
+    type: "mcq",
+    concept: "<strong>التباين:</strong> <span class='formula'>Var(X) = E(X²) - [E(X)]²</span><br>يقيس مقدار تشتت القيم حول المتوسط.",
+    question: "إذا كان E(X²)=18.4 و E(X)=4، ما قيمة Var(X)؟",
+    options: ["2.4", "3.4", "14.4", "22.4"],
+    answer: 0,
+    explanation: "✅ صح! Var(X) = E(X²) - [E(X)]² = 18.4 - 16 = 2.4"
+  },
+  {
+    id: 10,
+    topic: "دالة توليد العزوم",
+    badge: "badge-mgf",
+    type: "mcq",
+    concept: "<strong>دالة توليد العزوم (MGF):</strong> <span class='formula'>M(t) = E[eᵗˣ]</span><br>• المشتقة الأولى عند t=0 تعطي E(X)<br>• المشتقة الثانية عند t=0 تعطي E(X²)",
+    question: "إذا كانت M(t) = (1+t)³، ما قيمة E(X)؟ (تلميح: M'(0))",
+    options: ["3", "6", "9", "1"],
+    answer: 0,
+    explanation: "✅ صح! M'(t) = 3(1+t)², فعند t=0: M'(0) = 3(1)² = 3، إذن E(X) = 3"
+  }
+];
+
+let currentQ = 0;
+let score = 0;
+let correct = 0;
+let answered = false;
+
+function buildChapterNav() {
+  const nav = document.getElementById('chapterNav');
+  const labels = ["CDF - تعريف", "CDF - خصائص", "حساب CDF", "احتمال المدى", "PMF من CDF", "القيمة المتوقعة", "قواعد التوقع", "E(X²)", "التباين", "MGF"];
+  nav.innerHTML = '';
+  labels.forEach((lbl, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'chapter-btn' + (i === 0 ? ' active' : '');
+    btn.id = `chap-${i}`;
+    btn.textContent = `${i+1}. ${lbl}`;
+    btn.onclick = () => {
+      if (i < currentQ || i === currentQ) jumpTo(i);
+    };
+    nav.appendChild(btn);
+  });
+}
+
+function updateNav() {
+  for (let i = 0; i < questions.length; i++) {
+    const btn = document.getElementById(`chap-${i}`);
+    if (!btn) continue;
+    btn.className = 'chapter-btn';
+    if (i < currentQ) btn.classList.add('done');
+    if (i === currentQ) btn.classList.add('active');
+  }
+  const active = document.querySelector('.chapter-btn.active');
+  if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
+
+function jumpTo(i) {
+  currentQ = i;
+  answered = false;
+  renderQuestion();
+  updateNav();
+}
+
+function renderQuestion() {
+  const q = questions[currentQ];
+  const total = questions.length;
+  document.getElementById('qNum').textContent = `${currentQ+1} / ${total}`;
+  document.getElementById('progressBar').style.width = `${((currentQ + 1) / total) * 100}%`;
+
+  let tableHTML = '';
+  if (q.table) {
+    tableHTML = `<table class="prob-table">
+      <tr><th>x</th>${q.table.x.map(v=>`<th>${v}</th>`).join('')}</tr>
+      <tr><th>P(x)</th>${q.table.px.map(v=>`<td>${v}</td>`).join('')}</tr>
+    </table>`;
+  }
+
+  let interactHTML = '';
+  if (q.type === 'mcq') {
+    interactHTML = `<div class="options-grid">
+      ${q.options.map((opt, idx) => `<button class="option-btn" id="opt-${idx}" onclick="checkMCQ(${idx})">${opt}</button>`).join('')}
+    </div>`;
+  } else {
+    interactHTML = `<div class="input-row">
+      <input type="number" step="0.01" class="answer-input" id="ansInput" placeholder="${q.placeholder}" onkeydown="if(event.key==='Enter') checkInput();" />
+      <button class="submit-btn" onclick="checkInput()">تحقق</button>
+    </div>`;
+  }
+
+  document.getElementById('gameArea').innerHTML = `
+    <div class="game-card">
+      <div class="q-number">سؤال ${currentQ+1} من ${total}</div>
+      <span class="topic-badge ${q.badge}">🎯 ${q.topic}</span>
+      <div class="concept-card">${q.concept}</div>
+      ${tableHTML}
+      <div class="question-text">${q.question}</div>
+      ${interactHTML}
+      <div class="feedback" id="feedback"></div>
+      <button class="next-btn" id="nextBtn" onclick="nextQuestion()">
+        ${currentQ < total-1 ? 'السؤال التالي ←' : '🏁 إنهاء اللعبة'}
+      </button>
+    </div>
+  `;
+
+  answered = false;
+}
+
+function checkMCQ(idx) {
+  if (answered) return;
+  answered = true;
+  const q = questions[currentQ];
+  const fb = document.getElementById('feedback');
+  const nextBtn = document.getElementById('nextBtn');
+
+  for (let i = 0; i < q.options.length; i++) {
+    const btn = document.getElementById(`opt-${i}`);
+    btn.disabled = true;
+    if (i === q.answer) btn.classList.add('correct');
+    else if (i === idx && i !== q.answer) btn.classList.add('wrong');
+  }
+
+  if (idx === q.answer) {
+    score += 10; correct++;
+    document.getElementById('scoreVal').textContent = score;
+    document.getElementById('correctVal').textContent = correct;
+    fb.className = 'feedback correct show';
+    fb.textContent = q.explanation;
+  } else {
+    fb.className = 'feedback wrong show';
+    fb.textContent = `❌ ليس صحيحاً. ${q.explanation}`;
+  }
+
+  nextBtn.classList.add('show');
+}
+
+function checkInput() {
+  if (answered) return;
+  const q = questions[currentQ];
+  const inp = document.getElementById('ansInput');
+  const val = parseFloat(inp.value);
+  const correctVal = parseFloat(q.answer);
+  const fb = document.getElementById('feedback');
+  const nextBtn = document.getElementById('nextBtn');
+
+  if (Number.isNaN(val)) {
+    fb.className = 'feedback wrong show';
+    fb.textContent = 'اكتبي إجابة رقمية أولاً.';
+    return;
+  }
+
+  answered = true;
+  inp.disabled = true;
+
+  if (Math.abs(val - correctVal) < 0.01) {
+    score += 10; correct++;
+    document.getElementById('scoreVal').textContent = score;
+    document.getElementById('correctVal').textContent = correct;
+    inp.classList.add('correct-input');
+    fb.className = 'feedback correct show';
+    fb.textContent = q.explanation;
+  } else {
+    inp.classList.add('wrong-input');
+    fb.className = 'feedback wrong show';
+    fb.textContent = `❌ الإجابة كانت ${q.answer}. ${q.explanation}`;
+  }
+
+  nextBtn.classList.add('show');
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= questions.length) {
+    showCompletion();
+  } else {
+    answered = false;
+    renderQuestion();
+    updateNav();
+  }
+}
+
+function showCompletion() {
+  document.getElementById('gameArea').innerHTML = '';
+  document.getElementById('chapterNav').style.display = 'none';
+  const cs = document.getElementById('completionScreen');
+  cs.classList.add('show');
+
+  const pct = Math.round((correct / questions.length) * 100);
+  let medal = pct >= 90 ? '🥇' : pct >= 70 ? '🥈' : pct >= 50 ? '🥉' : '📚';
+  document.getElementById('progressBar').style.width = '100%';
+  document.getElementById('finalScore').innerHTML = `${medal} ${score} نقطة<br><span style="font-size:1rem;color:rgba(255,255,255,0.6)">${correct} صحيح من ${questions.length}</span>`;
+}
+
+function restartGame() {
+  currentQ = 0; score = 0; correct = 0; answered = false;
+  document.getElementById('scoreVal').textContent = 0;
+  document.getElementById('correctVal').textContent = 0;
+  document.getElementById('completionScreen').classList.remove('show');
+  document.getElementById('chapterNav').style.display = 'flex';
+  buildChapterNav();
+  renderQuestion();
+  updateNav();
+}
+
+buildChapterNav();
+renderQuestion();
+</script>
+</body>
+</html>
